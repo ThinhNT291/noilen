@@ -103,7 +103,7 @@
         // ==========================================
         // HÀM CHÍNH: YÊU CẦU VÀ PHÁT AUDIO
         // ==========================================
-        async function requestAndPlayAudio(textToSay = "Hôm nay là thứ 3, và nếu không có vấn đề gì thì mai sẽ là thứ tư") {
+        async function requestAndPlayAudio(textToSay = "Some people argue that the dominance of global languages like English threatens the survival of minority languages. To what extent do you agree or disagree?") {
             const statusDiv = document.getElementById('status');
             
             const payload = {
@@ -155,7 +155,7 @@
         }
 
         document.getElementById('btn-say-love').addEventListener('click', () => {
-            requestAndPlayAudio("Hôm nay là thứ 3, và nếu không có vấn đề gì thì mai sẽ là thứ tư");
+            requestAndPlayAudio("đọc bài tôi đã gửi");
         });
     </script>
 
