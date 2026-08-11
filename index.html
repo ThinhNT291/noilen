@@ -103,7 +103,7 @@
         // ==========================================
         // HÀM CHÍNH: YÊU CẦU VÀ PHÁT AUDIO
         // ==========================================
-        async function requestAndPlayAudio(textToSay = "I love you") {
+        async function requestAndPlayAudio(textToSay = "Hôm nay là thứ 3, và nếu không có vấn đề gì thì mai sẽ là thứ tư") {
             const statusDiv = document.getElementById('status');
             
             const payload = {
@@ -155,7 +155,7 @@
         }
 
         document.getElementById('btn-say-love').addEventListener('click', () => {
-            requestAndPlayAudio("I love you");
+            requestAndPlayAudio("Hôm nay là thứ 3, và nếu không có vấn đề gì thì mai sẽ là thứ tư");
         });
     </script>
 
