@@ -50,11 +50,59 @@
         <div id="status">Trạng thái: Đang chờ lệnh...</div>
     </div>
 
-    <!-- TOÀN BỘ MÃ JAVASCRIPT NHÉT VÀO ĐÂY -->
-    <script>
-        // BƯỚC 1: QUAN TRỌNG NHẤT - THAY LINK NÀY BẰNG LINK TỔNG ĐÀI GAS MỚI NHẤT CỦA ÔNG
+   <script>
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyxIByLyjZd8ywvX2f1KITj3djWsZg5DjS1lDIOz597nPCJHUrpmq72TgPk52PvO2aYdA/exec";
 
+        // ==========================================
+        // HÀM MỚI: BỌC ÁO KHOÁC WAV CHO RAW PCM CỦA GEMINI
+        // ==========================================
+        function createWavUrlFromBase64(base64Data, sampleRate = 24000) {
+            // Giải mã chuỗi Base64
+            const binaryString = window.atob(base64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            // Tạo bộ đệm 44 bytes cho WAV Header + phần Audio Data
+            const buffer = new ArrayBuffer(44 + bytes.length);
+            const view = new DataView(buffer);
+
+            // Hàm ghi chữ vào Header
+            const writeString = (view, offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+
+            // Viết cấu trúc WAV Header chuẩn
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + bytes.length, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // Kích thước chunk (16 = PCM)
+            view.setUint16(20, 1, true);  // Định dạng Audio (1 = PCM)
+            view.setUint16(22, 1, true);  // Số kênh (1 = Mono)
+            view.setUint32(24, sampleRate, true); // Tần số lấy mẫu (Gemini thường dùng 24000Hz)
+            view.setUint32(28, sampleRate * 2, true); // Byte rate
+            view.setUint16(32, 2, true);  // Block align
+            view.setUint16(34, 16, true); // Bits per sample
+            writeString(view, 36, 'data');
+            view.setUint32(40, bytes.length, true);
+
+            // Đổ cục Raw Audio của Gemini vào phía sau Header
+            const dataArray = new Uint8Array(buffer, 44);
+            dataArray.set(bytes);
+
+            // Biến thành file WAV hoàn chỉnh
+            const blob = new Blob([buffer], { type: 'audio/wav' });
+            return URL.createObjectURL(blob); // Trả về link ảo để trình duyệt phát
+        }
+
+        // ==========================================
+        // HÀM CHÍNH: YÊU CẦU VÀ PHÁT AUDIO
+        // ==========================================
         async function requestAndPlayAudio(textToSay = "I love you") {
             const statusDiv = document.getElementById('status');
             
@@ -64,31 +112,33 @@
             };
 
             try {
-                // Cập nhật giao diện
                 statusDiv.innerHTML = `Đang yêu cầu Gemini đọc câu: "${textToSay}"... ⏳`;
                 
-                // Gọi API lên GAS (Chống cache cho Safari)
                 const urlWithCacheBuster = GAS_WEB_APP_URL + "?t=" + new Date().getTime();
-const response = await fetch(urlWithCacheBuster, {
-    method: 'POST',
-    cache: 'no-store',
-    // Thêm dòng Headers này vào để báo cho Google biết đây là dạng text đơn giản
-    headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-    },
-    body: JSON.stringify(payload)
-});
+                const response = await fetch(urlWithCacheBuster, {
+                    method: 'POST',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
                 
                 const result = await response.json();
 
                 if (result.success && result.data && result.data.audioBase64) {
-                    statusDiv.innerHTML = "Đã nhận được file Audio! Đang phát... 🔊";
+                    statusDiv.innerHTML = "Đang xử lý âm thanh... 🔊";
                     
-                    // Phát âm thanh
-                    const audioPlayer = new Audio(result.data.audioBase64);
+                    // BƯỚC QUAN TRỌNG: Tách lấy phần lõi Base64 ra khỏi chuỗi MIME Type
+                    const rawBase64 = result.data.audioBase64.split('base64,')[1];
+                    
+                    // Chuyển đổi thành WAV (Tần số lấy mẫu của Gemini mặc định là 24000Hz)
+                    const wavUrl = createWavUrlFromBase64(rawBase64, 24000);
+                    
+                    // Phát bằng Link WAV hoàn hảo
+                    const audioPlayer = new Audio(wavUrl);
                     
                     audioPlayer.onended = () => {
                         statusDiv.innerHTML = "Đã phát xong! Sẵn sàng cho câu tiếp theo. ✅";
+                        URL.revokeObjectURL(wavUrl); // Dọn dẹp bộ nhớ
                     };
                     
                     audioPlayer.play().catch(e => {
@@ -104,7 +154,6 @@ const response = await fetch(urlWithCacheBuster, {
             }
         }
 
-        // BƯỚC 2: GẮN SỰ KIỆN KHI BẤM NÚT
         document.getElementById('btn-say-love').addEventListener('click', () => {
             requestAndPlayAudio("I love you");
         });
