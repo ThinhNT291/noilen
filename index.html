@@ -69,15 +69,15 @@
                 
                 // Gọi API lên GAS (Chống cache cho Safari)
                 const urlWithCacheBuster = GAS_WEB_APP_URL + "?t=" + new Date().getTime();
-                const response = await fetch(urlWithCacheBuster, {
-                    method: 'POST',
-                    cache: 'no-store',
-                    headers: {
+const response = await fetch(urlWithCacheBuster, {
+    method: 'POST',
+    cache: 'no-store',
+    // Thêm dòng Headers này vào để báo cho Google biết đây là dạng text đơn giản
+    headers: {
         'Content-Type': 'text/plain;charset=utf-8',
     },
     body: JSON.stringify(payload)
-                    body: JSON.stringify(payload)
-                });
+});
                 
                 const result = await response.json();
 
