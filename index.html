@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Gemini Audio API</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            padding: 50px; 
+            background-color: #f4f6f9;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        button { 
+            padding: 15px 30px; 
+            font-size: 18px; 
+            cursor: pointer; 
+            background: #e74c3c; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        button:hover { background: #c0392b; }
+        #status { 
+            margin-top: 20px; 
+            font-size: 16px;
+            color: #2c3e50; 
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Thử nghiệm AI phát âm thanh 🎙️</h2>
+        <p>Bấm nút bên dưới để yêu cầu Gemini gửi file Audio</p>
+        
+        <button id="btn-say-love">🗣️ Bảo Gemini nói "I love you"</button>
+        
+        <div id="status">Trạng thái: Đang chờ lệnh...</div>
+    </div>
+
+    <!-- TOÀN BỘ MÃ JAVASCRIPT NHÉT VÀO ĐÂY -->
+    <script>
+        // BƯỚC 1: QUAN TRỌNG NHẤT - THAY LINK NÀY BẰNG LINK TỔNG ĐÀI GAS MỚI NHẤT CỦA ÔNG
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbybKZLEk4M7fWw5ThXiqW6Ud7FMtcCgqj8mhajKgxX82Uko5TiitC4dEENEoMMFpU8kNA/exec";
+
+        async function requestAndPlayAudio(textToSay = "I love you") {
+            const statusDiv = document.getElementById('status');
+            
+            const payload = {
+                action: 'generate_audio',
+                text: `Please say the following phrase clearly and naturally: "${textToSay}"`
+            };
+
+            try {
+                // Cập nhật giao diện
+                statusDiv.innerHTML = `Đang yêu cầu Gemini đọc câu: "${textToSay}"... ⏳`;
+                
+                // Gọi API lên GAS (Chống cache cho Safari)
+                const urlWithCacheBuster = GAS_WEB_APP_URL + "?t=" + new Date().getTime();
+                const response = await fetch(urlWithCacheBuster, {
+                    method: 'POST',
+                    cache: 'no-store',
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+
+                if (result.success && result.data && result.data.audioBase64) {
+                    statusDiv.innerHTML = "Đã nhận được file Audio! Đang phát... 🔊";
+                    
+                    // Phát âm thanh
+                    const audioPlayer = new Audio(result.data.audioBase64);
+                    
+                    audioPlayer.onended = () => {
+                        statusDiv.innerHTML = "Đã phát xong! Sẵn sàng cho câu tiếp theo. ✅";
+                    };
+                    
+                    audioPlayer.play().catch(e => {
+                        console.error("Lỗi phát âm thanh:", e);
+                        statusDiv.innerHTML = "Lỗi: Trình duyệt chặn tự động phát âm thanh. Hãy click vào trang 1 lần rồi thử lại.";
+                    });
+                    
+                } else {
+                    statusDiv.innerHTML = "❌ Lỗi từ Backend: " + (result.error || "Không rõ nguyên nhân");
+                }
+            } catch (err) {
+                statusDiv.innerHTML = "❌ Lỗi kết nối API: " + err.message;
+            }
+        }
+
+        // BƯỚC 2: GẮN SỰ KIỆN KHI BẤM NÚT
+        document.getElementById('btn-say-love').addEventListener('click', () => {
+            requestAndPlayAudio("I love you");
+        });
+    </script>
+
+</body>
+</html>
